@@ -1,0 +1,5 @@
+{
+  "name": "Memoria Dashboard",
+  "description": "A distributed context-aware synchronization dashboard for AI memory and vector stores, featuring Strict Handoff protocols and Gemini-powered system intelligence.",
+  "requestFramePermissions": []
+}
