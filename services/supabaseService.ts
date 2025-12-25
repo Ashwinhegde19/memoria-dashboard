@@ -15,7 +15,70 @@ export const isSupabaseConfigured = (): boolean => {
 };
 
 // ============================================================================
-// SYNC CODE BASED STORAGE (No Auth Required)
+// SYNC CODE CREDENTIALS (Password Protection)
+// ============================================================================
+
+export interface SyncCredentials {
+    sync_code: string;
+    password_hash: string;
+    created_at: string;
+}
+
+/**
+ * Create a new sync code with password
+ */
+export const createSyncCredentials = async (
+    syncCode: string,
+    passwordHash: string
+): Promise<void> => {
+    if (!supabase) throw new Error('Supabase not configured');
+
+    const { error } = await supabase
+        .from('sync_credentials')
+        .insert({
+            sync_code: syncCode,
+            password_hash: passwordHash,
+        });
+
+    if (error) throw error;
+};
+
+/**
+ * Verify sync code password
+ */
+export const verifySyncPassword = async (
+    syncCode: string,
+    passwordHash: string
+): Promise<boolean> => {
+    if (!supabase) return false;
+
+    const { data, error } = await supabase
+        .from('sync_credentials')
+        .select('password_hash')
+        .eq('sync_code', syncCode)
+        .single();
+
+    if (error || !data) return false;
+    return data.password_hash === passwordHash;
+};
+
+/**
+ * Check if sync code exists
+ */
+export const syncCodeExists = async (syncCode: string): Promise<boolean> => {
+    if (!supabase) return false;
+
+    const { data, error } = await supabase
+        .from('sync_credentials')
+        .select('sync_code')
+        .eq('sync_code', syncCode)
+        .single();
+
+    return !error && data !== null;
+};
+
+// ============================================================================
+// SYNC CODE BASED STORAGE (Password Protected)
 // ============================================================================
 
 export interface CloudBrain {

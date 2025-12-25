@@ -4,7 +4,7 @@ import { Icon } from './components/Icons';
 import { BrainCard } from './components/BrainCard';
 import { BrainDetail } from './components/BrainDetail';
 import { NetworkGraph } from './components/NetworkGraph';
-import { SyncCodeModal, getSyncCode, setSyncCode } from './components/SyncCodeModal';
+import { SyncCodeModal, getSyncCode, setSyncCode, getSyncHash, setSyncHash } from './components/SyncCodeModal';
 import { fetchSystemState, formatBytes, getApiConfig, saveApiConfig } from './services/mockData';
 import { 
   isSupabaseConfigured, 
@@ -64,8 +64,9 @@ function App() {
   }, [syncCode]);
   
   // Handle sync code change from modal
-  const handleSyncCodeChange = (code: string) => {
+  const handleSyncCodeChange = (code: string, passwordHash: string) => {
     setSyncCode(code); // Save to localStorage
+    setSyncHash(passwordHash); // Save password hash
     setSyncCodeState(code); // Update state
   };
   
