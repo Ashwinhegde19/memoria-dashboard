@@ -276,6 +276,20 @@ export const BrainDetail: React.FC<BrainDetailProps> = ({ brain, dirHandle, sync
               {source === 'cloud' ? '☁️ Cloud' : '💻 Local'}
             </span>
           </div>
+          
+          {/* Copy Resume Command */}
+          <button
+            onClick={() => {
+              const uuid = brain.localPath.replace('./', '');
+              const command = `gemini --resume ${uuid}`;
+              navigator.clipboard.writeText(command);
+              alert('Copied: ' + command);
+            }}
+            className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded text-slate-300 transition-colors"
+            title="Copy resume command for Gemini CLI"
+          >
+            <span>📋</span> Copy Resume Command
+          </button>
         </div>
 
         {/* File Tree */}

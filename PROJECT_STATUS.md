@@ -5,48 +5,44 @@
 ## ✅ Completed Features
 
 ### Core Application
-- [x] React 18 + TypeScript application setup with Vite
-- [x] Tailwind CSS styling with custom sci-fi theme
-- [x] Custom color palette (`memoria-dark`, `memoria-card`, `memoria-accent`, etc.)
-- [x] Custom fonts (Inter, JetBrains Mono)
+- [x] React 18 + TypeScript with Vite
+- [x] Tailwind CSS with sci-fi theme
 - [x] Error boundary for graceful error handling
+- [x] Local directory mounting via File System Access API
+- [x] Recursive directory scanning with size/count calculation
 
-### Brain Management
-- [x] Brain data model with zones (`SINGULARITY`, `EVENT_HORIZON`, `DEEP_VOID`)
-- [x] Sync state tracking (`COHERENT`, `ENTANGLING`, `DECOHERENT`, `LOCKED`, `STABILIZING`)
-- [x] `BrainCard` component displaying brain metadata (mass, neurons, peers, cycle)
-- [x] Zone indicators with visual styling
-- [x] State badges with animations (pulse for syncing states)
-- [x] Search and filter functionality for brains ✨
-- [x] **Brain detail view with file explorer** ✨ NEW
-
-### Local Directory Mounting
-- [x] File System Access API integration for local folder mounting
-- [x] Recursive directory scanning with safelist filtering
-- [x] Directory size and file count calculation
-- [x] Platform detection (macOS, Linux, Windows)
+### Gemini CLI Integration
+- [x] Auto-detect antigravity folder structure
+- [x] Navigate into `brain/` subfolder automatically
+- [x] Project name mapping via `project_names.json`
+- [x] Display project names instead of UUIDs
+- [x] **Copy Resume Command button** – copies `gemini --resume UUID` to clipboard
 
 ### Cloud Sync (Supabase)
-- [x] Supabase client initialization with environment variables
-- [x] Sync code generation (`ABC-123-XYZ` format)
-- [x] Save brains to cloud with upsert support
-- [x] Fetch brains from cloud by sync code
-- [x] Delete brains from cloud
-- [x] Check if sync code exists
-- [x] File upload to Supabase Storage with progress tracking
-- [x] File download from Supabase Storage
-- [x] List and delete cloud files
+- [x] Supabase client with environment variables
+- [x] **Password-protected sync codes** (SHA-256 hashing)
+- [x] Sync code generation (`ABC-1234-DEFG` format)
+- [x] **Per-brain sync** – sync individual projects only
+- [x] **Full project sync** – syncs brain folder + conversation .pb file
+- [x] **Progress bar modal** – shows upload % and current file
+- [x] File upload/download to Supabase Storage
+- [x] Cloud file listing (recursive)
+
+### Brain Management
+- [x] Brain cards with zone indicators (Singularity, Event Horizon, Deep Void)
+- [x] Sync state badges (Coherent, Entangling, Stabilizing, Locked, Decoherent)
+- [x] **Search and filter** by name/zone
+- [x] **Brain detail view** with file explorer
+- [x] **File tree** with expandable folders
+- [x] **File content preview**
 
 ### UI Components
-- [x] Sidebar navigation with icons
-- [x] Dashboard view with brain cards
-- [x] Devices view (placeholder)
-- [x] Logs view with clear button and improved display ✨
-- [x] Sync code modal with generate/copy/use functionality
-- [x] Settings panel for API configuration
+- [x] Sidebar navigation
+- [x] Dashboard with brain cards
+- [x] Logs view with clear button
+- [x] Sync code modal with password protection
+- [x] Settings panel
 - [x] Icon component system
-- [x] **File tree with expandable folders** ✨ NEW
-- [x] **File content preview** ✨ NEW
 
 ## 🚧 In Progress
 
@@ -54,31 +50,25 @@
 
 ## ❌ Missing / Planned
 
-- [ ] Real-time sync status updates (WebSocket/Supabase Realtime)
+- [ ] Real-time sync status (WebSocket/Supabase Realtime)
+- [ ] Download files from cloud to local
 - [ ] Device discovery and peer-to-peer sync
 - [ ] Conflict resolution for concurrent edits
-- [ ] Settings persistence to local storage
 - [ ] Dark/light theme toggle
-- [ ] Mobile responsive design improvements
-- [ ] Keyboard shortcuts
+- [ ] Mobile responsive improvements
 
 ## 🐞 Known Issues
 
-> No TODO/FIXME comments found in the codebase.
+- Console has debug logs (will be removed before production)
+- Conversation .pb files sync but require manual placement on target system
 
 ---
 
-## Architecture Notes
+## Cross-Device Workflow
 
-### Data Flow
-1. User mounts a local directory via File System Access API
-2. App scans directory and creates Brain objects
-3. Brain metadata is synced to Supabase `brains` table
-4. Files are uploaded to Supabase Storage bucket `brain-files`
-5. Sync codes enable sharing across devices
-
-### Key Interfaces
-- `Brain` – Core data model for tracked directories
-- `CloudBrain` – Supabase table schema representation
-- `SyncState` – Enum for sync status tracking
-- `SectorZone` – Enum for brain classification
+1. **Source System**: Mount → Click brain → "Sync to Cloud"
+2. **Target System**:
+   - View files in Memoria Dashboard
+   - Download and place in `~/.gemini/antigravity/brain/` and `conversations/`
+   - Click "Copy Resume Command" → paste in terminal
+   - Run `gemini --resume UUID` to continue conversation

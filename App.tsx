@@ -33,6 +33,8 @@ function App() {
   // Local File System Handle Ref
   // Using FileSystemDirectoryHandle type from File System Access API
   const dirHandleRef = useRef<FileSystemDirectoryHandle | null>(null);
+  // Handle for the actual brains directory (may be brain/ subfolder)
+  const brainsDirHandleRef = useRef<FileSystemDirectoryHandle | null>(null);
   
   // Modals
   const [showSettings, setShowSettings] = useState(false);
@@ -217,7 +219,7 @@ function App() {
 
   // Sync a single brain to cloud (for per-project sync)
   const handleSyncSingleBrain = async (brain: Brain) => {
-    if (!syncCode || !dirHandleRef.current) return;
+    if (!syncCode || !brainsDirHandleRef.current) return;
     
     setSyncing(true);
     
@@ -235,7 +237,7 @@ function App() {
       
       // Upload files for this brain only
       const brainDirName = brain.localPath.replace('./', '');
-      const brainHandle = await dirHandleRef.current.getDirectoryHandle(brainDirName);
+      const brainHandle = await brainsDirHandleRef.current.getDirectoryHandle(brainDirName);
       const files = await collectFilesFromDirectory(brainHandle);
       
       if (files.length > 0) {
@@ -254,6 +256,30 @@ function App() {
           module: 'net',
           message: `Synced ${brain.name}: ${result.uploaded}/${files.length} files uploaded`
         }]);
+      }
+      
+      // Also try to upload the conversation .pb file if we have access to antigravity root
+      if (dirHandleRef.current) {
+        try {
+          const conversationsHandle = await dirHandleRef.current.getDirectoryHandle('conversations');
+          const pbFileHandle = await conversationsHandle.getFileHandle(`${brainDirName}.pb`);
+          const pbFile = await pbFileHandle.getFile();
+          
+          // Upload the conversation file
+          const conversationFiles = [{ path: `${brainDirName}.pb`, content: pbFile }];
+          await uploadFilesToCloud(syncCode, `${brain.name}/_conversation`, conversationFiles, () => {});
+          
+          setLogs(prev => [...prev, {
+            id: Date.now().toString(),
+            timestamp: Date.now(),
+            level: 'info',
+            module: 'net',
+            message: `Synced conversation history for ${brain.name}`
+          }]);
+        } catch {
+          // Conversation file not available, that's ok
+          console.log('No conversation file found for', brainDirName);
+        }
       }
       
       await loadCloudBrains();
@@ -334,6 +360,21 @@ function App() {
         // Couldn't navigate to brain/, use root handle
       }
       
+      // Store the brains directory handle for BrainDetail to use
+      brainsDirHandleRef.current = scanHandle;
+      
+      // Try to read project_names.json mapping file
+      let projectNamesMap: Record<string, string> = {};
+      try {
+        const mappingHandle = await scanHandle.getFileHandle('project_names.json');
+        const mappingFile = await mappingHandle.getFile();
+        const mappingContent = await mappingFile.text();
+        projectNamesMap = JSON.parse(mappingContent);
+        console.log('Loaded project names mapping:', projectNamesMap);
+      } catch (err) {
+        console.log('No project_names.json found or error reading:', err);
+      }
+      
       // DYNAMIC SCANNING:
       // Scan ALL folders in the mounted directory instead of looking for specific names
       const zones = [SectorZone.SINGULARITY, SectorZone.EVENT_HORIZON, SectorZone.DEEP_VOID];
@@ -353,18 +394,24 @@ function App() {
                const stats = await scanDirectoryRecursively(dirHandle);
                
                // Try to read task.md to get a better display name
-               let displayName = folderName;
-               try {
-                 const taskHandle = await dirHandle.getFileHandle('task.md');
-                 const taskFile = await taskHandle.getFile();
-                 const taskContent = await taskFile.text();
-                 // Extract first heading (# Title)
-                 const headingMatch = taskContent.match(/^#\s+(.+)$/m);
-                 if (headingMatch && headingMatch[1]) {
-                   displayName = headingMatch[1].trim();
+               // Priority: 1) project_names.json mapping, 2) task.md heading, 3) folder name
+               let displayName = projectNamesMap[folderName] || folderName;
+               console.log(`Folder: ${folderName}, Mapped: ${projectNamesMap[folderName]}, DisplayName: ${displayName}`);
+               
+               // If no mapping, try task.md
+               if (!projectNamesMap[folderName]) {
+                 try {
+                   const taskHandle = await dirHandle.getFileHandle('task.md');
+                   const taskFile = await taskHandle.getFile();
+                   const taskContent = await taskFile.text();
+                   // Extract first heading (# Title)
+                   const headingMatch = taskContent.match(/^#\s+(.+)$/m);
+                   if (headingMatch && headingMatch[1]) {
+                     displayName = headingMatch[1].trim();
+                   }
+                 } catch {
+                   // No task.md or can't read it, use folder name
                  }
-               } catch {
-                 // No task.md or can't read it, use folder name
                }
                
                // Assign zones in order: first folder = Singularity, second = Event Horizon, etc.
@@ -1012,7 +1059,7 @@ function App() {
       {selectedBrain && (
         <BrainDetail
           brain={selectedBrain}
-          dirHandle={dirHandleRef.current}
+          dirHandle={brainsDirHandleRef.current}
           syncCode={syncCode}
           onClose={() => setSelectedBrain(null)}
           onSync={syncCode ? () => handleSyncSingleBrain(selectedBrain) : undefined}

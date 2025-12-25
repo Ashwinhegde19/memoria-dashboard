@@ -1,15 +1,26 @@
 # Memoria Dashboard
 
-A futuristic, sci-fi themed dashboard for managing and syncing "Brains" (local project directories) across devices using Supabase as the cloud backend.
+A futuristic, sci-fi themed dashboard for managing and syncing Gemini CLI "Brains" across devices using Supabase as the cloud backend.
 
 ## ✨ Features
 
-- **Local Directory Mounting** – Mount local folders using the File System Access API
-- **Cloud Sync** – Sync brains to Supabase Storage using shareable sync codes
-- **Brain Management** – View and manage brains with zone classification (Singularity, Event Horizon, Deep Void)
-- **Real-time State Tracking** – Monitor sync states (Coherent, Entangling, Stabilizing, Locked, Decoherent)
-- **Cross-Device Sync** – Share sync codes to access your brains from any device
-- **Activity Logs** – View sync operations and system events
+### Core
+- **Local Directory Mounting** – Mount `~/.gemini/antigravity/` using the File System Access API
+- **Auto-detection** – Automatically navigates into `brain/` subfolder when antigravity folder is mounted
+- **Project Name Mapping** – Shows project names from `project_names.json` instead of UUIDs
+
+### Cloud Sync
+- **Password-Protected Sync Codes** – Secure sync with SHA-256 hashed passwords
+- **Per-Brain Sync** – Sync individual projects instead of the entire 800MB+ folder
+- **Full Project Sync** – Syncs brain folder + conversation history (.pb file)
+- **Progress Bar** – Visual progress tracking during uploads
+- **Cross-Device Continuity** – Copy resume command button for easy continuation on other devices
+
+### Brain Management
+- **Brain Cards** – View brains with zone classification and sync states
+- **File Explorer** – Browse and preview files within each brain
+- **Search & Filter** – Filter brains by name or zone
+- **Activity Logs** – Monitor sync operations and events
 
 ## 🛠️ Tech Stack
 
@@ -21,7 +32,6 @@ A futuristic, sci-fi themed dashboard for managing and syncing "Brains" (local p
 | **Styling** | Tailwind CSS (via CDN) |
 | **Backend** | Supabase (Database + Storage) |
 | **Charts** | Recharts |
-| **Fonts** | Inter, JetBrains Mono |
 
 ## 📁 Project Structure
 
@@ -30,66 +40,46 @@ memoria-dashboard/
 ├── App.tsx                 # Main application component
 ├── index.html              # Entry HTML with Tailwind config
 ├── index.tsx               # React entry point
-├── index.css               # Global styles
-├── types.ts                # TypeScript type definitions
-├── vite.config.ts          # Vite configuration
+├── types.ts                # TypeScript types
 ├── components/
-│   ├── BrainCard.tsx       # Brain display card component
-│   ├── ErrorBoundary.tsx   # Error boundary wrapper
-│   ├── Icons.tsx           # SVG icon components
-│   ├── IntelligencePanel.tsx
-│   ├── NetworkGraph.tsx    # Network visualization
-│   └── SyncCodeModal.tsx   # Sync code management modal
+│   ├── BrainCard.tsx       # Brain display card
+│   ├── BrainDetail.tsx     # File explorer & preview
+│   ├── Icons.tsx           # SVG icons
+│   └── SyncCodeModal.tsx   # Sync code management
 └── services/
-    ├── geminiService.ts    # Gemini AI integration
-    ├── mockData.ts         # Mock data and utilities
-    └── supabaseService.ts  # Supabase CRUD operations
+    ├── mockData.ts         # Utilities
+    └── supabaseService.ts  # Supabase CRUD + file sync
 ```
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-
 - [Bun](https://bun.sh/) (v1.0+)
-- Supabase account (optional, for cloud sync)
+- Supabase account
 
 ### Installation
 
 ```bash
-# Clone the repository
-git clone <repository-url>
+git clone https://github.com/Ashwinhegde19/memoria-dashboard.git
 cd memoria-dashboard
-
-# Install dependencies
 bun install
-
-# Start development server
 bun run dev
 ```
 
 ### Environment Variables
 
-Create a `.env.local` file for Supabase integration:
-
+Create `.env`:
 ```env
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-### Available Scripts
-
-| Command | Description |
-|---------|-------------|
-| `bun run dev` | Start development server |
-| `bun run build` | Build for production |
-| `bun run preview` | Preview production build |
-
 ## 🗄️ Supabase Setup
 
-1. Create a new Supabase project
-2. Create a `brains` table with the following schema:
+1. Create tables:
 
 ```sql
+-- Brains table
 CREATE TABLE brains (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   sync_code TEXT NOT NULL,
@@ -102,10 +92,31 @@ CREATE TABLE brains (
   updated_at TIMESTAMPTZ DEFAULT now(),
   UNIQUE(sync_code, name)
 );
+
+-- Sync credentials table
+CREATE TABLE sync_credentials (
+  sync_code TEXT PRIMARY KEY,
+  password_hash TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
 ```
 
-3. Create a storage bucket named `brain-files` for file sync
-4. Set up appropriate RLS policies for your use case
+2. Create storage bucket `brain-files` with RLS policy:
+
+```sql
+CREATE POLICY "Allow anon access to brain-files" 
+ON storage.objects FOR ALL TO anon, authenticated
+USING (bucket_id = 'brain-files')
+WITH CHECK (bucket_id = 'brain-files');
+```
+
+## 🔄 Cross-Device Workflow
+
+1. **System A**: Mount folder → Click brain → "Sync to Cloud"
+2. **System B**: 
+   - Download files from Memoria Dashboard
+   - Copy to `~/.gemini/antigravity/brain/` and `conversations/`
+   - Use "Copy Resume Command" → Paste in terminal: `gemini --resume UUID`
 
 ## 📄 License
 
