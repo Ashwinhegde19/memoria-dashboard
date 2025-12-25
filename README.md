@@ -15,6 +15,7 @@ A futuristic, sci-fi themed dashboard for managing and syncing "Brains" (local p
 
 | Category | Technology |
 |----------|------------|
+| **Runtime** | Bun |
 | **Framework** | React 18 + TypeScript |
 | **Build Tool** | Vite 5 |
 | **Styling** | Tailwind CSS (via CDN) |
@@ -49,8 +50,7 @@ memoria-dashboard/
 
 ### Prerequisites
 
-- Node.js 18+
-- npm or yarn
+- [Bun](https://bun.sh/) (v1.0+)
 - Supabase account (optional, for cloud sync)
 
 ### Installation
@@ -61,10 +61,10 @@ git clone <repository-url>
 cd memoria-dashboard
 
 # Install dependencies
-npm install
+bun install
 
 # Start development server
-npm run dev
+bun run dev
 ```
 
 ### Environment Variables
@@ -80,9 +80,9 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start development server |
-| `npm run build` | Build for production |
-| `npm run preview` | Preview production build |
+| `bun run dev` | Start development server |
+| `bun run build` | Build for production |
+| `bun run preview` | Preview production build |
 
 ## 🗄️ Supabase Setup
 
