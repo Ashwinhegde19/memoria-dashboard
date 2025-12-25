@@ -24,6 +24,10 @@ function App() {
   const [syncing, setSyncing] = useState(false);
   const [cloudBrains, setCloudBrains] = useState<CloudBrain[]>([]);
   
+  // Search & Filter State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterZone, setFilterZone] = useState<SectorZone | 'all'>('all');
+  
   // Local File System Handle Ref
   // Using FileSystemDirectoryHandle type from File System Access API
   const dirHandleRef = useRef<FileSystemDirectoryHandle | null>(null);
@@ -38,6 +42,15 @@ function App() {
   const [devices, setDevices] = useState<Device[]>([]);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [networkData, setNetworkData] = useState<{ time: string; mbps: number }[]>([]);
+  
+  // Filtered brains based on search and zone filter
+  const filteredBrains = brains.filter(brain => {
+    const matchesSearch = searchQuery === '' || 
+      brain.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      brain.localPath.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesZone = filterZone === 'all' || brain.zone === filterZone;
+    return matchesSearch && matchesZone;
+  });
   
   // Load cloud brains when sync code is set
   useEffect(() => {
@@ -511,32 +524,90 @@ function App() {
                    Topology
                    {dirHandleRef.current && <span className="text-[10px] bg-cyan-900/50 text-cyan-400 px-2 py-0.5 rounded border border-cyan-700/50 uppercase tracking-wide">Local Mounted</span>}
                  </h2>
+                 
+                 {/* Search & Filter Controls */}
+                 <div className="flex items-center gap-3">
+                   <div className="relative">
+                     <input
+                       type="text"
+                       placeholder="Search brains..."
+                       value={searchQuery}
+                       onChange={(e) => setSearchQuery(e.target.value)}
+                       className="bg-slate-900 border border-slate-700 rounded-lg pl-8 pr-3 py-1.5 text-sm text-white placeholder:text-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none w-48"
+                     />
+                     <Icon name="cpu" className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                   </div>
+                   <select
+                     value={filterZone}
+                     onChange={(e) => setFilterZone(e.target.value as SectorZone | 'all')}
+                     className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white focus:border-cyan-500 outline-none"
+                   >
+                     <option value="all">All Zones</option>
+                     <option value={SectorZone.SINGULARITY}>Singularity</option>
+                     <option value={SectorZone.EVENT_HORIZON}>Event Horizon</option>
+                     <option value={SectorZone.DEEP_VOID}>Deep Void</option>
+                   </select>
+                 </div>
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {brains.map(brain => (
-                  <BrainCard key={brain.id} brain={brain} />
-                ))}
+                {filteredBrains.length === 0 ? (
+                  <div className="col-span-3 text-center py-8 text-slate-500">
+                    {brains.length === 0 ? 'No brains mounted. Click "Mount Source" to get started.' : 'No brains match your search.'}
+                  </div>
+                ) : (
+                  filteredBrains.map(brain => (
+                    <BrainCard key={brain.id} brain={brain} />
+                  ))
+                )}
               </div>
             </div>
           </div>
         );
       case NavigationTab.LOGS:
         return (
-          <div className="bg-black/90 rounded-lg border border-slate-800 p-4 font-mono text-xs h-[calc(100vh-140px)] overflow-y-auto">
-            {logs.length === 0 && <div className="text-slate-600 text-center italic mt-4">No events logged</div>}
-            {logs.map((log, i) => (
-              <div key={i} className="mb-1.5 flex gap-3 border-b border-slate-900/50 pb-1 last:border-0">
-                <span className="text-slate-600 w-24 shrink-0">{new Date(log.timestamp).toLocaleTimeString()}</span>
-                <span className={`font-bold w-12 shrink-0 ${
-                  log.level === 'info' ? 'text-cyan-600' :
-                  log.level === 'warn' ? 'text-amber-600' :
-                  log.level === 'error' ? 'text-red-600' : 'text-slate-600'
-                }`}>
-                  {log.module.toUpperCase()}
-                </span>
-                <span className="text-slate-300">{log.message}</span>
-              </div>
-            ))}
+          <div className="space-y-4">
+            {/* Logs Header */}
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <Icon name="activity" className="w-5 h-5 text-slate-400" />
+                Event Stream
+                <span className="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full font-mono">{logs.length}</span>
+              </h2>
+              {logs.length > 0 && (
+                <button
+                  onClick={() => setLogs([])}
+                  className="text-xs text-slate-500 hover:text-red-400 transition-colors px-3 py-1 rounded border border-slate-800 hover:border-red-800"
+                >
+                  Clear Logs
+                </button>
+              )}
+            </div>
+            
+            {/* Logs Container */}
+            <div className="bg-black/90 rounded-lg border border-slate-800 p-4 font-mono text-xs h-[calc(100vh-200px)] overflow-y-auto">
+              {logs.length === 0 ? (
+                <div className="text-slate-600 text-center italic py-8 flex flex-col items-center gap-2">
+                  <Icon name="activity" className="w-8 h-8 opacity-30" />
+                  <p>No events logged yet</p>
+                  <p className="text-slate-700">Activity will appear here as you use the app</p>
+                </div>
+              ) : (
+                [...logs].reverse().map((log, i) => (
+                  <div key={i} className="mb-2 flex gap-3 border-b border-slate-900/50 pb-2 last:border-0 hover:bg-slate-900/30 -mx-2 px-2 rounded">
+                    <span className="text-slate-600 w-20 shrink-0">{new Date(log.timestamp).toLocaleTimeString()}</span>
+                    <span className={`font-bold w-10 shrink-0 uppercase text-[10px] py-0.5 px-1.5 rounded text-center ${
+                      log.level === 'info' ? 'bg-cyan-900/30 text-cyan-400' :
+                      log.level === 'warn' ? 'bg-amber-900/30 text-amber-400' :
+                      log.level === 'error' ? 'bg-red-900/30 text-red-400' : 'bg-slate-800 text-slate-500'
+                    }`}>
+                      {log.level}
+                    </span>
+                    <span className="text-slate-500 font-bold w-12 shrink-0 uppercase text-[10px]">{log.module}</span>
+                    <span className="text-slate-300 flex-1">{log.message}</span>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         );
       case NavigationTab.DEVICES:
