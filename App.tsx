@@ -23,6 +23,7 @@ function App() {
   const [syncCode, setSyncCodeState] = useState<string | null>(getSyncCode());
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [syncProgress, setSyncProgress] = useState<{ total: number; completed: number; currentFile: string } | null>(null);
   const [cloudBrains, setCloudBrains] = useState<CloudBrain[]>([]);
   
   // Search & Filter State
@@ -165,8 +166,12 @@ function App() {
             }]);
             
             const result = await uploadFilesToCloud(syncCode, brain.name, files, (progress) => {
-              // Update log with progress
-              console.log(`Uploading: ${progress.currentFile} (${progress.completed}/${progress.total})`);
+              // Update progress UI
+              setSyncProgress({
+                total: progress.total,
+                completed: progress.completed,
+                currentFile: progress.currentFile || ''
+              });
             });
             
             uploadedFiles += result.uploaded;
@@ -206,6 +211,64 @@ function App() {
       }]);
     } finally {
       setSyncing(false);
+      setSyncProgress(null);
+    }
+  };
+
+  // Sync a single brain to cloud (for per-project sync)
+  const handleSyncSingleBrain = async (brain: Brain) => {
+    if (!syncCode || !dirHandleRef.current) return;
+    
+    setSyncing(true);
+    
+    try {
+      const { uploadFilesToCloud } = await import('./services/supabaseService');
+      
+      // Save brain metadata
+      await saveBrainToCloud(syncCode, {
+        name: brain.name,
+        zone: brain.zone,
+        localPath: brain.localPath,
+        massBytes: brain.massBytes,
+        neuronCount: brain.neuronCount,
+      });
+      
+      // Upload files for this brain only
+      const brainDirName = brain.localPath.replace('./', '');
+      const brainHandle = await dirHandleRef.current.getDirectoryHandle(brainDirName);
+      const files = await collectFilesFromDirectory(brainHandle);
+      
+      if (files.length > 0) {
+        const result = await uploadFilesToCloud(syncCode, brain.name, files, (progress) => {
+          setSyncProgress({
+            total: progress.total,
+            completed: progress.completed,
+            currentFile: progress.currentFile || ''
+          });
+        });
+        
+        setLogs(prev => [...prev, {
+          id: Date.now().toString(),
+          timestamp: Date.now(),
+          level: 'info',
+          module: 'net',
+          message: `Synced ${brain.name}: ${result.uploaded}/${files.length} files uploaded`
+        }]);
+      }
+      
+      await loadCloudBrains();
+    } catch (err) {
+      setLogs(prev => [...prev, {
+        id: Date.now().toString(),
+        timestamp: Date.now(),
+        level: 'error',
+        module: 'net',
+        message: `Failed to sync ${brain.name}: ${err instanceof Error ? err.message : 'Unknown error'}`
+      }]);
+    } finally {
+      setSyncing(false);
+      setSyncProgress(null);
+      setSelectedBrain(null);
     }
   };
 
@@ -921,8 +984,45 @@ function App() {
           dirHandle={dirHandleRef.current}
           syncCode={syncCode}
           onClose={() => setSelectedBrain(null)}
-          onSync={syncCode ? handleSyncToCloud : undefined}
+          onSync={syncCode ? () => handleSyncSingleBrain(selectedBrain) : undefined}
         />
+      )}
+
+      {/* Sync Progress Modal */}
+      {syncProgress && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4">
+          <div className="bg-[#0f172a] border border-slate-800 rounded-lg w-full max-w-md p-6 shadow-2xl">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-8 h-8 border-3 border-slate-700 border-t-fuchsia-500 rounded-full animate-spin" />
+              <div>
+                <h2 className="text-lg font-bold text-white">Syncing to Cloud</h2>
+                <p className="text-xs text-slate-500">Please wait while files are uploading...</p>
+              </div>
+            </div>
+            
+            {/* Progress Bar */}
+            <div className="mb-4">
+              <div className="flex justify-between text-sm mb-2">
+                <span className="text-slate-400">{syncProgress.completed} / {syncProgress.total} files</span>
+                <span className="text-fuchsia-400 font-bold">
+                  {syncProgress.total > 0 ? Math.round((syncProgress.completed / syncProgress.total) * 100) : 0}%
+                </span>
+              </div>
+              <div className="h-3 bg-slate-800 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-fuchsia-600 to-cyan-500 rounded-full transition-all duration-300"
+                  style={{ width: `${syncProgress.total > 0 ? (syncProgress.completed / syncProgress.total) * 100 : 0}%` }}
+                />
+              </div>
+            </div>
+            
+            {/* Current File */}
+            <div className="bg-black/50 rounded p-3 border border-slate-800">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Uploading</p>
+              <p className="text-xs text-slate-300 font-mono truncate">{syncProgress.currentFile || '...'}</p>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
