@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Brain, Device, LogEntry, NavigationTab, SectorZone, SyncState } from './types';
 import { Icon } from './components/Icons';
 import { BrainCard } from './components/BrainCard';
+import { BrainDetail } from './components/BrainDetail';
 import { NetworkGraph } from './components/NetworkGraph';
 import { SyncCodeModal, getSyncCode, setSyncCode } from './components/SyncCodeModal';
 import { fetchSystemState, formatBytes, getApiConfig, saveApiConfig } from './services/mockData';
@@ -42,6 +43,9 @@ function App() {
   const [devices, setDevices] = useState<Device[]>([]);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [networkData, setNetworkData] = useState<{ time: string; mbps: number }[]>([]);
+  
+  // Selected brain for detail view
+  const [selectedBrain, setSelectedBrain] = useState<Brain | null>(null);
   
   // Filtered brains based on search and zone filter
   const filteredBrains = brains.filter(brain => {
@@ -556,7 +560,13 @@ function App() {
                   </div>
                 ) : (
                   filteredBrains.map(brain => (
-                    <BrainCard key={brain.id} brain={brain} />
+                    <div 
+                      key={brain.id} 
+                      onClick={() => setSelectedBrain(brain)}
+                      className="cursor-pointer transform transition-transform hover:scale-[1.02]"
+                    >
+                      <BrainCard brain={brain} />
+                    </div>
                   ))
                 )}
               </div>
@@ -888,6 +898,16 @@ function App() {
           onClose={() => setShowSyncModal(false)} 
           onSync={handleSyncCodeChange}
           currentCode={syncCode}
+        />
+      )}
+
+      {/* Brain Detail Modal */}
+      {selectedBrain && (
+        <BrainDetail
+          brain={selectedBrain}
+          dirHandle={dirHandleRef.current}
+          onClose={() => setSelectedBrain(null)}
+          onSync={syncCode ? handleSyncToCloud : undefined}
         />
       )}
     </div>
