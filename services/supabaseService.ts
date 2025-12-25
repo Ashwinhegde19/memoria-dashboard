@@ -217,15 +217,25 @@ export const downloadFileFromCloud = async (
 };
 
 /**
- * List all files for a brain in cloud storage
+ * List all files for a brain in cloud storage (recursive)
  */
+export interface CloudFile {
+    name: string;
+    path: string;
+    size: number;
+    isFolder: boolean;
+}
+
 export const listCloudFiles = async (
     syncCode: string,
-    brainName: string
-): Promise<string[]> => {
+    brainName: string,
+    subPath: string = ''
+): Promise<CloudFile[]> => {
     if (!supabase) throw new Error('Supabase not configured');
 
-    const storagePath = `${syncCode}/${brainName}`;
+    const storagePath = subPath
+        ? `${syncCode}/${brainName}/${subPath}`
+        : `${syncCode}/${brainName}`;
 
     const { data, error } = await supabase.storage
         .from(STORAGE_BUCKET)
@@ -234,7 +244,34 @@ export const listCloudFiles = async (
         });
 
     if (error) throw error;
-    return data?.map(f => f.name) || [];
+
+    const files: CloudFile[] = [];
+
+    for (const item of data || []) {
+        const itemPath = subPath ? `${subPath}/${item.name}` : item.name;
+
+        if (item.id === null) {
+            // It's a folder - recursively list
+            files.push({
+                name: item.name,
+                path: itemPath,
+                size: 0,
+                isFolder: true,
+            });
+            const subFiles = await listCloudFiles(syncCode, brainName, itemPath);
+            files.push(...subFiles);
+        } else {
+            // It's a file
+            files.push({
+                name: item.name,
+                path: itemPath,
+                size: item.metadata?.size || 0,
+                isFolder: false,
+            });
+        }
+    }
+
+    return files;
 };
 
 /**
@@ -247,9 +284,10 @@ export const deleteCloudFiles = async (
     if (!supabase) throw new Error('Supabase not configured');
 
     const files = await listCloudFiles(syncCode, brainName);
-    if (files.length === 0) return;
+    const filePaths = files.filter(f => !f.isFolder).map(f => f.path);
+    if (filePaths.length === 0) return;
 
-    const paths = files.map(f => `${syncCode}/${brainName}/${f}`);
+    const paths = filePaths.map(f => `${syncCode}/${brainName}/${f}`);
 
     const { error } = await supabase.storage
         .from(STORAGE_BUCKET)

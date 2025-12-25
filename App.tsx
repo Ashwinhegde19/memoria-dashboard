@@ -906,6 +906,7 @@ function App() {
         <BrainDetail
           brain={selectedBrain}
           dirHandle={dirHandleRef.current}
+          syncCode={syncCode}
           onClose={() => setSelectedBrain(null)}
           onSync={syncCode ? handleSyncToCloud : undefined}
         />

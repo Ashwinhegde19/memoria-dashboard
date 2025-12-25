@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Brain, SyncState, SectorZone } from '../types';
+import { Brain, SectorZone } from '../types';
 import { Icon } from './Icons';
 import { formatBytes } from '../services/mockData';
+import { listCloudFiles, downloadFileFromCloud, CloudFile } from '../services/supabaseService';
 
 interface BrainDetailProps {
   brain: Brain;
   dirHandle: FileSystemDirectoryHandle | null;
+  syncCode: string | null;
   onClose: () => void;
   onSync?: () => void;
 }
@@ -18,35 +20,87 @@ interface FileNode {
   path: string;
 }
 
-export const BrainDetail: React.FC<BrainDetailProps> = ({ brain, dirHandle, onClose, onSync }) => {
+export const BrainDetail: React.FC<BrainDetailProps> = ({ brain, dirHandle, syncCode, onClose, onSync }) => {
   const [files, setFiles] = useState<FileNode[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [fileContent, setFileContent] = useState<string | null>(null);
   const [loadingContent, setLoadingContent] = useState(false);
+  const [source, setSource] = useState<'local' | 'cloud'>('local');
 
   // Load files when component mounts
   useEffect(() => {
     loadFiles();
-  }, [brain, dirHandle]);
+  }, [brain, dirHandle, syncCode]);
 
   const loadFiles = async () => {
-    if (!dirHandle) {
-      setLoading(false);
-      return;
+    setLoading(true);
+    
+    // Try local first, then cloud
+    if (dirHandle) {
+      try {
+        const brainDirName = brain.localPath.replace('./', '');
+        const brainHandle = await dirHandle.getDirectoryHandle(brainDirName);
+        const fileTree = await scanDirectory(brainHandle, brainDirName);
+        setFiles(fileTree);
+        setSource('local');
+        setLoading(false);
+        return;
+      } catch (err) {
+        console.log('Local not available, trying cloud...');
+      }
     }
+    
+    // Try cloud
+    if (syncCode) {
+      try {
+        const cloudFiles = await listCloudFiles(syncCode, brain.name);
+        const fileTree = convertCloudFilesToTree(cloudFiles);
+        setFiles(fileTree);
+        setSource('cloud');
+      } catch (err) {
+        console.error('Failed to load from cloud:', err);
+      }
+    }
+    
+    setLoading(false);
+  };
 
-    try {
-      const brainDirName = brain.localPath.replace('./', '');
-      const brainHandle = await dirHandle.getDirectoryHandle(brainDirName);
-      const fileTree = await scanDirectory(brainHandle, brainDirName);
-      setFiles(fileTree);
-    } catch (err) {
-      console.error('Failed to load files:', err);
-    } finally {
-      setLoading(false);
+  // Convert flat CloudFile list to tree structure
+  const convertCloudFilesToTree = (cloudFiles: CloudFile[]): FileNode[] => {
+    const root: FileNode[] = [];
+    const pathMap = new Map<string, FileNode>();
+    
+    // Sort to process folders before their contents
+    const sorted = [...cloudFiles].sort((a, b) => a.path.localeCompare(b.path));
+    
+    for (const cf of sorted) {
+      const parts = cf.path.split('/');
+      const node: FileNode = {
+        name: cf.name,
+        type: cf.isFolder ? 'folder' : 'file',
+        size: cf.size,
+        path: cf.path,
+        children: cf.isFolder ? [] : undefined,
+      };
+      
+      pathMap.set(cf.path, node);
+      
+      if (parts.length === 1) {
+        root.push(node);
+      } else {
+        const parentPath = parts.slice(0, -1).join('/');
+        const parent = pathMap.get(parentPath);
+        if (parent && parent.children) {
+          parent.children.push(node);
+        } else {
+          root.push(node);
+        }
+      }
     }
+    
+    return root;
   };
 
   const scanDirectory = async (
@@ -102,43 +156,53 @@ export const BrainDetail: React.FC<BrainDetailProps> = ({ brain, dirHandle, onCl
   };
 
   const loadFileContent = async (path: string) => {
-    if (!dirHandle) return;
-    
     setLoadingContent(true);
     setSelectedFile(path);
     
     try {
-      // Navigate to file
-      const parts = path.split('/').filter(Boolean);
-      let currentHandle: FileSystemDirectoryHandle = dirHandle;
-      
-      for (let i = 0; i < parts.length - 1; i++) {
-        currentHandle = await currentHandle.getDirectoryHandle(parts[i]);
-      }
-      
-      const fileHandle = await currentHandle.getFileHandle(parts[parts.length - 1]);
-      const file = await fileHandle.getFile();
-      
-      // Only read text files
-      if (file.size > 100000) {
-        setFileContent('[File too large to preview]');
-      } else if (file.type.startsWith('text/') || 
-                 file.name.endsWith('.json') || 
-                 file.name.endsWith('.md') ||
-                 file.name.endsWith('.ts') ||
-                 file.name.endsWith('.tsx') ||
-                 file.name.endsWith('.js') ||
-                 file.name.endsWith('.css')) {
-        const text = await file.text();
-        setFileContent(text);
-      } else {
-        setFileContent('[Binary file - cannot preview]');
+      if (source === 'local' && dirHandle) {
+        // Load from local file system
+        const parts = path.split('/').filter(Boolean);
+        let currentHandle: FileSystemDirectoryHandle = dirHandle;
+        
+        for (let i = 0; i < parts.length - 1; i++) {
+          currentHandle = await currentHandle.getDirectoryHandle(parts[i]);
+        }
+        
+        const fileHandle = await currentHandle.getFileHandle(parts[parts.length - 1]);
+        const file = await fileHandle.getFile();
+        
+        if (file.size > 100000) {
+          setFileContent('[File too large to preview]');
+        } else if (isTextFile(file.name)) {
+          const text = await file.text();
+          setFileContent(text);
+        } else {
+          setFileContent('[Binary file - cannot preview]');
+        }
+      } else if (source === 'cloud' && syncCode) {
+        // Load from cloud storage
+        const blob = await downloadFileFromCloud(syncCode, brain.name, path);
+        
+        if (blob.size > 100000) {
+          setFileContent('[File too large to preview]');
+        } else if (isTextFile(path)) {
+          const text = await blob.text();
+          setFileContent(text);
+        } else {
+          setFileContent('[Binary file - cannot preview]');
+        }
       }
     } catch (err) {
       setFileContent(`[Error loading file: ${err}]`);
     } finally {
       setLoadingContent(false);
     }
+  };
+
+  const isTextFile = (name: string): boolean => {
+    const textExtensions = ['.json', '.md', '.txt', '.ts', '.tsx', '.js', '.jsx', '.css', '.html', '.yml', '.yaml', '.xml', '.svg', '.sh', '.py', '.rb', '.go', '.rs', '.sql'];
+    return textExtensions.some(ext => name.toLowerCase().endsWith(ext));
   };
 
   const getZoneColor = (zone: SectorZone) => {
@@ -208,8 +272,8 @@ export const BrainDetail: React.FC<BrainDetailProps> = ({ brain, dirHandle, onCl
             <span className={`px-2 py-0.5 rounded border ${getZoneColor(brain.zone)}`}>
               {brain.zone}
             </span>
-            <span className="text-slate-500">
-              {formatBytes(brain.massBytes)} • {brain.neuronCount} files
+            <span className={`px-2 py-0.5 rounded border ${source === 'cloud' ? 'bg-fuchsia-900/30 text-fuchsia-400 border-fuchsia-700/50' : 'bg-emerald-900/30 text-emerald-400 border-emerald-700/50'}`}>
+              {source === 'cloud' ? '☁️ Cloud' : '💻 Local'}
             </span>
           </div>
         </div>
@@ -223,7 +287,9 @@ export const BrainDetail: React.FC<BrainDetailProps> = ({ brain, dirHandle, onCl
             </div>
           ) : files.length === 0 ? (
             <div className="text-center py-8 text-slate-600">
-              No files found
+              <Icon name="folder" className="w-8 h-8 mx-auto mb-2 opacity-30" />
+              <p>No files found</p>
+              {!syncCode && <p className="text-xs mt-2">Set up cloud sync to view files from other devices</p>}
             </div>
           ) : (
             renderFileTree(files)
@@ -232,7 +298,7 @@ export const BrainDetail: React.FC<BrainDetailProps> = ({ brain, dirHandle, onCl
 
         {/* Actions */}
         <div className="p-4 border-t border-slate-800 space-y-2">
-          {onSync && (
+          {onSync && source === 'local' && (
             <button
               onClick={onSync}
               className="w-full py-2 bg-fuchsia-900/30 hover:bg-fuchsia-900/50 text-fuchsia-400 rounded border border-fuchsia-800/50 text-sm font-medium transition-colors flex items-center justify-center gap-2"
