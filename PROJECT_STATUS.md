@@ -50,6 +50,7 @@
 
 ## ❌ Missing / Planned
 
+- [ ] **`memoria-sync` CLI tool** – Auto-download and resume on other devices
 - [ ] Real-time sync status (WebSocket/Supabase Realtime)
 - [ ] Download files from cloud to local
 - [ ] Device discovery and peer-to-peer sync
