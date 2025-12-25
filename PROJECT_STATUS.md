@@ -17,7 +17,8 @@
 - [x] `BrainCard` component displaying brain metadata (mass, neurons, peers, cycle)
 - [x] Zone indicators with visual styling
 - [x] State badges with animations (pulse for syncing states)
-- [x] **Search and filter functionality for brains** ✨ NEW
+- [x] Search and filter functionality for brains ✨
+- [x] **Brain detail view with file explorer** ✨ NEW
 
 ### Local Directory Mounting
 - [x] File System Access API integration for local folder mounting
@@ -40,10 +41,12 @@
 - [x] Sidebar navigation with icons
 - [x] Dashboard view with brain cards
 - [x] Devices view (placeholder)
-- [x] **Logs view with clear button and improved display** ✨ NEW
+- [x] Logs view with clear button and improved display ✨
 - [x] Sync code modal with generate/copy/use functionality
 - [x] Settings panel for API configuration
 - [x] Icon component system
+- [x] **File tree with expandable folders** ✨ NEW
+- [x] **File content preview** ✨ NEW
 
 ## 🚧 In Progress
 
@@ -54,7 +57,6 @@
 - [ ] Real-time sync status updates (WebSocket/Supabase Realtime)
 - [ ] Device discovery and peer-to-peer sync
 - [ ] Conflict resolution for concurrent edits
-- [ ] Brain detail view with file explorer
 - [ ] Settings persistence to local storage
 - [ ] Dark/light theme toggle
 - [ ] Mobile responsive design improvements
