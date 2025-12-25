@@ -336,13 +336,28 @@ function App() {
             try {
                const stats = await scanDirectoryRecursively(dirHandle);
                
+               // Try to read task.md to get a better display name
+               let displayName = folderName;
+               try {
+                 const taskHandle = await dirHandle.getFileHandle('task.md');
+                 const taskFile = await taskHandle.getFile();
+                 const taskContent = await taskFile.text();
+                 // Extract first heading (# Title)
+                 const headingMatch = taskContent.match(/^#\s+(.+)$/m);
+                 if (headingMatch && headingMatch[1]) {
+                   displayName = headingMatch[1].trim();
+                 }
+               } catch {
+                 // No task.md or can't read it, use folder name
+               }
+               
                // Assign zones in order: first folder = Singularity, second = Event Horizon, etc.
                // After 3 folders, all additional folders get DEEP_VOID zone
                const zoneIndex = Math.min(folderIndex, zones.length - 1);
                
                newBrains.push({
                   id: `local_${folderName}`,
-                  name: folderName,
+                  name: displayName,
                   zone: zones[zoneIndex],
                   localPath: `./${folderName}`,
                   massBytes: stats.size,
