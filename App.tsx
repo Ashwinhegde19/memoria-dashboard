@@ -318,6 +318,22 @@ function App() {
   const processLocalMount = async (rootHandle: FileSystemDirectoryHandle): Promise<Brain[]> => {
       const newBrains: Brain[] = [];
       
+      // Check if this is the antigravity folder - if so, navigate into brain/ subfolder
+      let scanHandle = rootHandle;
+      try {
+        // Check for known antigravity structure (has brain, conversations, etc.)
+        const entries: string[] = [];
+        for await (const entry of rootHandle.values()) {
+          entries.push(entry.name);
+        }
+        // If we see antigravity structure, go into brain/ folder
+        if (entries.includes('brain') && entries.includes('conversations')) {
+          scanHandle = await rootHandle.getDirectoryHandle('brain');
+        }
+      } catch {
+        // Couldn't navigate to brain/, use root handle
+      }
+      
       // DYNAMIC SCANNING:
       // Scan ALL folders in the mounted directory instead of looking for specific names
       const zones = [SectorZone.SINGULARITY, SectorZone.EVENT_HORIZON, SectorZone.DEEP_VOID];
@@ -325,7 +341,7 @@ function App() {
       
       let folderIndex = 0;
       
-      for await (const entry of rootHandle.values()) {
+      for await (const entry of scanHandle.values()) {
          if (entry.kind === 'directory') {
             const dirHandle = entry as FileSystemDirectoryHandle;
             const folderName = entry.name;
