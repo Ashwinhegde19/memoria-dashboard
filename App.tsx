@@ -128,13 +128,25 @@ function App() {
       
       for (const brain of brains) {
         // Save brain metadata
-        await saveBrainToCloud(syncCode, {
-          name: brain.name,
-          zone: brain.zone,
-          localPath: brain.localPath,
-          massBytes: brain.massBytes,
-          neuronCount: brain.neuronCount,
-        });
+        try {
+          await saveBrainToCloud(syncCode, {
+            name: brain.name,
+            zone: brain.zone,
+            localPath: brain.localPath,
+            massBytes: brain.massBytes,
+            neuronCount: brain.neuronCount,
+          });
+        } catch (dbErr) {
+          console.error('Failed to save brain metadata:', dbErr);
+          setLogs(prev => [...prev, {
+            id: Date.now().toString(),
+            timestamp: Date.now(),
+            level: 'error',
+            module: 'net',
+            message: `Failed to save ${brain.name}: ${dbErr instanceof Error ? dbErr.message : 'Database error'}`
+          }]);
+          // Continue with other brains
+        }
         
         // Try to get brain's directory handle and upload files
         try {
