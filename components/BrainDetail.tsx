@@ -47,8 +47,8 @@ export const BrainDetail: React.FC<BrainDetailProps> = ({ brain, dirHandle, sync
         setSource('local');
         setLoading(false);
         return;
-      } catch (err) {
-        console.log('Local not available, trying cloud...');
+      } catch {
+        // Local not available, try cloud
       }
     }
     

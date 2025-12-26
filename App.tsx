@@ -50,8 +50,32 @@ function App() {
   // Selected brain for detail view
   const [selectedBrain, setSelectedBrain] = useState<Brain | null>(null);
   
+  // Combine local brains with cloud brains (cloud fills in when local isn't available)
+  const allBrains = React.useMemo(() => {
+    if (brains.length > 0) {
+      // Have local brains - use them as primary
+      return brains;
+    } else if (cloudBrains.length > 0) {
+      // No local mount - convert cloud brains to Brain format for display
+      const converted = cloudBrains.map((cb, index) => ({
+        id: cb.id || `cloud_${index}`,
+        name: cb.name,
+        zone: (cb.zone as SectorZone) || SectorZone.DEEP_VOID,
+        localPath: cb.local_path || `./${cb.name}`,
+        massBytes: cb.mass_bytes || 0,
+        neuronCount: cb.neuron_count || 0,
+        lastPulse: Date.now(),
+        state: SyncState.COHERENT,
+        generation: 1,
+        peers: [],
+      }));
+      return converted;
+    }
+    return [];
+  }, [brains, cloudBrains]);
+  
   // Filtered brains based on search and zone filter
-  const filteredBrains = brains.filter(brain => {
+  const filteredBrains = allBrains.filter(brain => {
     const matchesSearch = searchQuery === '' || 
       brain.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       brain.localPath.toLowerCase().includes(searchQuery.toLowerCase());
@@ -278,7 +302,6 @@ function App() {
           }]);
         } catch {
           // Conversation file not available, that's ok
-          console.log('No conversation file found for', brainDirName);
         }
       }
       
@@ -370,9 +393,8 @@ function App() {
         const mappingFile = await mappingHandle.getFile();
         const mappingContent = await mappingFile.text();
         projectNamesMap = JSON.parse(mappingContent);
-        console.log('Loaded project names mapping:', projectNamesMap);
-      } catch (err) {
-        console.log('No project_names.json found or error reading:', err);
+      } catch {
+        // No mapping file, that's ok
       }
       
       // DYNAMIC SCANNING:
@@ -396,7 +418,6 @@ function App() {
                // Try to read task.md to get a better display name
                // Priority: 1) project_names.json mapping, 2) task.md heading, 3) folder name
                let displayName = projectNamesMap[folderName] || folderName;
-               console.log(`Folder: ${folderName}, Mapped: ${projectNamesMap[folderName]}, DisplayName: ${displayName}`);
                
                // If no mapping, try task.md
                if (!projectNamesMap[folderName]) {
@@ -595,7 +616,8 @@ function App() {
        );
     }
 
-    if (!isConnected) {
+    // Consider connected if local mount OR cloud brains are available
+    if (!isConnected && allBrains.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center h-[70vh] text-center p-6 animate-fade-in">
                 <div className="w-16 h-16 rounded bg-slate-800 flex items-center justify-center mb-6 shadow-2xl shadow-cyan-900/20">
