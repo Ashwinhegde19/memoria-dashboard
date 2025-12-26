@@ -290,6 +290,45 @@ export const BrainDetail: React.FC<BrainDetailProps> = ({ brain, dirHandle, sync
           >
             <span>📋</span> Copy Resume Command
           </button>
+          
+          {/* Download All Files */}
+          {source === 'cloud' && files.length > 0 && (
+            <button
+              onClick={async () => {
+                try {
+                  if (!syncCode) return;
+                  
+                  // Download all files
+                  const allFiles = files.flatMap(function flatten(node: FileNode): { path: string; name: string }[] {
+                    if (node.type === 'folder' && node.children) {
+                      return node.children.flatMap(flatten);
+                    }
+                    return [{ path: node.path, name: node.name }];
+                  });
+                  
+                  // Download each file and save
+                  for (const file of allFiles) {
+                    const blob = await downloadFileFromCloud(syncCode, brain.name, file.path);
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = file.name;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }
+                  
+                  alert(`Downloaded ${allFiles.length} files. Place them in ~/.gemini/antigravity/brain/${brain.localPath.replace('./', '')}/`);
+                } catch (err) {
+                  console.error('Download failed:', err);
+                  alert('Download failed. Check console for details.');
+                }
+              }}
+              className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 text-xs bg-cyan-900/50 hover:bg-cyan-800/50 border border-cyan-700/50 rounded text-cyan-300 transition-colors"
+              title="Download files from cloud"
+            >
+              <span>⬇️</span> Download All Files
+            </button>
+          )}
         </div>
 
         {/* File Tree */}
