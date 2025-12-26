@@ -2,52 +2,43 @@
 
 > Cross-device sync for Gemini CLI conversations
 
-## 🚀 One-Line Install (Linux/macOS)
+## 🚀 One Command Install
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/Ashwinhegde19/memoria-dashboard/main/memoria-sync/install.sh | bash
 ```
 
-Then run:
-```bash
-export PATH="$HOME/.memoria-sync:$PATH"  # Only needed once
-memoria-sync --code YOUR_SYNC_CODE --list
-```
-
 ## Usage
 
 ```bash
-# List available brains for a sync code
-memoria-sync --code PBA-8496-RZSQ --list
+# List your synced brains
+memoria-sync --code YOUR_SYNC_CODE --list
 
 # Sync a brain and auto-resume conversation
-memoria-sync --code PBA-8496-RZSQ --uuid c98a759d-8ea9-45b0-b61b-9e1a8f9f14fa
+memoria-sync --code YOUR_SYNC_CODE --uuid BRAIN_UUID
 
 # Sync without auto-resuming
-memoria-sync --code PBA-8496-RZSQ --uuid c98a759d-... --no-resume
+memoria-sync --code YOUR_SYNC_CODE --uuid BRAIN_UUID --no-resume
 ```
 
-## What it does
+## How to Get Your Sync Code
 
-1. 📥 Downloads all brain files from Supabase cloud
-2. 📁 Places them in `~/.gemini/antigravity/brain/{uuid}/`
+1. Go to https://memoria-dashboard.vercel.app
+2. Mount your `~/.gemini/antigravity/` folder
+3. Click **Cloud Sync** → Create sync code
+4. Sync your brains to cloud
+5. Click **📋** button → Copies the install command with your code!
+
+## What It Does
+
+1. 📥 Downloads brain files from cloud
+2. 📁 Saves to `~/.gemini/antigravity/brain/{uuid}/`
 3. 💬 Downloads conversation `.pb` file
-4. 📂 Places it in `~/.gemini/antigravity/conversations/`
+4. 📂 Saves to `~/.gemini/antigravity/conversations/`
 5. 🚀 Runs `gemini --resume {uuid}` automatically
-
-## Example Output
-
-```
-📥 Downloading memoria-dashboard (18 files)...
-📁 Saved to ~/.gemini/antigravity/brain/c98a759d-.../
-💬 Conversation synced!
-🚀 Launching Gemini CLI...
-
-> Ready to continue your conversation!
-```
 
 ## Requirements
 
 - Node.js 18+
 - Git
-- Gemini CLI installed on the target system
+- Gemini CLI installed
