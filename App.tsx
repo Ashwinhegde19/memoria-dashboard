@@ -909,6 +909,17 @@ function App() {
                     >
                       <Icon name="shield" className="w-4 h-4" />
                     </button>
+                    <button
+                      onClick={() => {
+                        const installCmd = `curl -sSL https://raw.githubusercontent.com/Ashwinhegde19/memoria-dashboard/main/memoria-sync/install.sh | bash && export PATH="$HOME/.memoria-sync:$PATH" && memoria-sync --code ${syncCode} --list`;
+                        navigator.clipboard.writeText(installCmd);
+                        alert('Copied! Paste this command on your other system to sync.');
+                      }}
+                      className="p-2 bg-fuchsia-900/30 hover:bg-fuchsia-900/50 text-fuchsia-400 rounded-lg border border-fuchsia-800/50 transition-all"
+                      title="Copy sync command for other devices"
+                    >
+                      📋
+                    </button>
                   </div>
                 ) : (
                   <button
