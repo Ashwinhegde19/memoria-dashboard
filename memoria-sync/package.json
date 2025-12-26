@@ -1,31 +1,43 @@
 {
-    "name": "memoria-sync",
+    "name": "@ashwinhegde19/memoria-sync",
     "version": "1.0.0",
-    "description": "Cross-device sync CLI for memoria-dashboard",
+    "description": "Cross-device sync CLI for Gemini CLI conversations - pairs with memoria-dashboard",
     "main": "dist/index.js",
     "bin": {
         "memoria-sync": "./dist/index.js"
     },
+    "files": [
+        "dist"
+    ],
     "scripts": {
         "build": "tsc",
-        "start": "node dist/index.js",
-        "dev": "ts-node src/index.ts"
+        "prepublishOnly": "npm run build",
+        "start": "node dist/index.js"
     },
     "keywords": [
         "memoria",
         "gemini",
+        "gemini-cli",
         "sync",
-        "cli"
+        "cli",
+        "cross-device"
     ],
-    "author": "",
+    "author": "Ashwin Hegde",
     "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Ashwinhegde19/memoria-dashboard.git",
+        "directory": "memoria-sync"
+    },
     "dependencies": {
         "@supabase/supabase-js": "^2.89.0",
         "commander": "^12.0.0"
     },
     "devDependencies": {
         "@types/node": "^20.0.0",
-        "typescript": "^5.5.0",
-        "ts-node": "^10.9.0"
+        "typescript": "^5.5.0"
+    },
+    "engines": {
+        "node": ">=18"
     }
 }
