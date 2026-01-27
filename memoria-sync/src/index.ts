@@ -197,15 +197,18 @@ async function listBrains(syncCode: string) {
     }
 
     console.log(`\n📁 Found ${brains.length} brains:\n`);
+    console.log('─'.repeat(60));
+
     brains.forEach((b, i) => {
         const uuid = b.local_path?.replace('./', '') || 'unknown';
-        console.log(`  ${i + 1}. ${b.name}`);
-        console.log(`     UUID: ${uuid}`);
-        console.log('');
+        console.log(`\n  ${i + 1}. ${b.name}`);
+        console.log(`     Copy this command to sync:\n`);
+        console.log(`     memoria-sync --code ${syncCode} --uuid ${uuid}`);
     });
 
-    console.log('To sync a brain, run:');
-    console.log('  memoria-sync --code YOUR_CODE --uuid UUID_FROM_ABOVE');
+    console.log('\n' + '─'.repeat(60));
+    console.log('\n📋 Just copy one of the commands above and run it!');
+    console.log('   Files will be downloaded and conversation will resume automatically.\n');
 }
 
 // CLI setup
