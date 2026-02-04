@@ -25,6 +25,3 @@ dist-ssr
 .vercel
 
 .env
-
-# Auto Claude data directory
-.auto-claude/
